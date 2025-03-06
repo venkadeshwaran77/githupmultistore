@@ -1,137 +1,56 @@
-import 'dart:io';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:multi_store/widgets/auth_widget.dart';
 import 'package:multi_store/widgets/snackbar.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
 
 class CustomerLogin extends StatefulWidget {
   const CustomerLogin({super.key});
 
   @override
-  State<_CustomerLoginState> createState() => _CustomerLoginState();
+  State<CustomerLogin> createState() => _CustomerLoginState();
 }
-
 class _CustomerLoginState extends State<CustomerLogin> {
-  late String name;
   late String email;
   late String password;
-  late String profileImage;
-  late String _uid;
+  
   bool processing = false;
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final GlobalKey<ScaffoldMessengerState> _scaffoldKey =
       GlobalKey<ScaffoldMessengerState>();
   bool passwordVisible = false;
 
-  final ImagePicker _picker = ImagePicker();
-
-  XFile? _imageFile;
-  dynamic _pickedImageError;
-
-  CollectionReference customers = FirebaseFirestore.instance.collection(
-    'customers',
-  );
-
-  void _pickImageFromCamera() async {
-    try {
-      final pickedImage = await _picker.pickImage(
-        source: ImageSource.camera,
-        maxHeight: 300,
-        maxWidth: 300,
-        imageQuality: 95,
-      );
-      setState(() {
-        _imageFile = pickedImage;
-      });
-    } catch (e) {
-      setState(() {
-        _pickedImageError = e;
-      });
-      print(_pickedImageError);
-    }
-  }
-
-  void _pickImageFromGallery() async {
-    try {
-      final pickedImage = await _picker.pickImage(
-        source: ImageSource.gallery,
-        maxHeight: 300,
-        maxWidth: 300,
-        imageQuality: 95,
-      );
-      setState(() {
-        _imageFile = pickedImage;
-      });
-    } catch (e) {
-      setState(() {
-        _pickedImageError = e;
-      });
-      print(_pickedImageError);
-    }
-  }
-
-  void signUp() async {
+  void LogIn() async {
     setState(() {
       processing = true;
     });
     if (_formKey.currentState!.validate()) {
-      if (_imageFile != null) {
-        try {
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
-            email: email,
-            password: password,
+      try {
+        await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+
+        _formKey.currentState!.reset();
+        Navigator.pushReplacementNamed(context, 'customer_home');
+      } on FirebaseAuthException catch (e) {
+          if (e.code == 'user-not-found') {
+            setState(() {
+             processing = false;
+            });
+           MyMessageHandler.showSnackBar(
+            _scaffoldKey,
+            'No user found for that email.',
           );
-
-          firebase_storage.Reference ref = firebase_storage
-              .FirebaseStorage
-              .instance
-              .ref('cust-images/$email.jpg');
-
-          await ref.putFile(File(_imageFile!.path));
-          _uid = FirebaseAuth.instance.currentUser!.uid;
-
-          profileImage = await ref.getDownloadURL();
-          await customers.doc(_uid).set({
-            'name': name,
-            'email': email,
-            'profileimage': profileImage,
-            'phone': '',
-            'address': '',
-            'cid': _uid,
-          });
-          _formKey.currentState!.reset();
-          setState(() {
-            _imageFile = null;
-          });
-          Navigator.pushReplacementNamed(context, 'customer_home');
-        } on FirebaseAuthException catch (e) {
-          if (e.code == 'weak-password') {
+          } else if (e.code == 'wrong-password') {
             setState(() {
               processing = false;
-            });
-            MyMessageHandler.showSnackBar(
-              _scaffoldKey,
-              'The password provided is too weak',
-            );
-          } else if (e.code == 'email-already-in-use') {
-            setState(() {
-              processing = false;
-            });
-            MyMessageHandler.showSnackBar(
-              _scaffoldKey,
-              'The account already exists for that email.',
-            );
-          }
+           });
+             MyMessageHandler.showSnackBar(
+            _scaffoldKey,
+            'wrong password provided for that user.',
+          );
         }
-      } else {
-        setState(() {
-          processing = false;
-        });
-        MyMessageHandler.showSnackBar(_scaffoldKey, 'please pick image first');
-      }
+       }
     } else {
       setState(() {
         processing = false;
@@ -155,83 +74,10 @@ class _CustomerLoginState extends State<CustomerLogin> {
                 child: Form(
                   key: _formKey,
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      AuthHeaderLabel(headerLabel: 'Sign Up'),
-                      Row(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 20,
-                              horizontal: 40,
-                            ),
-                            child: CircleAvatar(
-                              radius: 60,
-                              backgroundColor: Colors.amber,
-                              backgroundImage:
-                                  _imageFile == null
-                                      ? null
-                                      : FileImage(File(_imageFile!.path)),
-                            ),
-                          ),
-                          Column(
-                            children: [
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.orangeAccent,
-                                  borderRadius: BorderRadius.only(
-                                    topLeft: Radius.circular(15),
-                                    topRight: Radius.circular(15),
-                                  ),
-                                ),
-                                child: IconButton(
-                                  icon: Icon(
-                                    Icons.camera_alt,
-                                    color: Colors.white,
-                                  ),
-                                  onPressed: () {
-                                    _pickImageFromCamera();
-                                  },
-                                ),
-                              ),
-                              SizedBox(height: 6),
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.orangeAccent,
-                                  borderRadius: BorderRadius.only(
-                                    bottomLeft: Radius.circular(15),
-                                    bottomRight: Radius.circular(15),
-                                  ),
-                                ),
-                                child: IconButton(
-                                  icon: Icon(Icons.photo, color: Colors.white),
-                                  onPressed: () {
-                                    _pickImageFromGallery();
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        child: TextFormField(
-                          validator: (value) {
-                            if (value!.isEmpty) {
-                              return 'please enter your full name';
-                            }
-                            return null;
-                          },
-                          onChanged: (value) {
-                            name = value;
-                          },
-                          //controller: _nameController,
-                          decoration: textFormDecoration.copyWith(
-                            labelText: 'Full Name',
-                            hintText: 'Enter your Full Name',
-                          ),
-                        ),
-                      ),
+                      AuthHeaderLabel(headerLabel: 'Log In'),
+                      SizedBox(height: 50),
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 10),
                         child: TextFormField(
@@ -289,17 +135,32 @@ class _CustomerLoginState extends State<CustomerLogin> {
                           ),
                         ),
                       ),
-                      HaveAccount(
-                        haveAccount: 'already have account?',
-                        actionLabel: 'Log In',
+                      TextButton(
                         onPressed: () {},
+                        child: Text(
+                          'Forget Password ?',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ),
+                      HaveAccount(
+                        haveAccount: 'Don\'t Have Account?',
+                        actionLabel: 'Sign Up',
+                        onPressed: () {
+                          Navigator.pushReplacementNamed(
+                            context,
+                            'customer_signup',
+                          );
+                        },
                       ),
                       processing == true
-                          ? CircularProgressIndicator()
+                          ? Center(child: CircularProgressIndicator())
                           : AuthMainButton(
-                            mainButtonLabel: 'Sign Up',
+                            mainButtonLabel: 'Log In',
                             onPressed: () async {
-                              signUp();
+                              LogIn();
                             },
                           ),
                     ],
