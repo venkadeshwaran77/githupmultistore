@@ -7,14 +7,14 @@ import 'package:multi_store/widgets/snackbar.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
 
-class CustomerRegister extends StatefulWidget {
-  const CustomerRegister({super.key});
+class CustomerLogin extends StatefulWidget {
+  const CustomerLogin({super.key});
 
   @override
-  State<CustomerRegister> createState() => _CustomerRegisterState();
+  State<_CustomerLoginState> createState() => _CustomerLoginState();
 }
 
-class _CustomerRegisterState extends State<CustomerRegister> {
+class _CustomerLoginState extends State<CustomerLogin> {
   late String name;
   late String email;
   late String password;
