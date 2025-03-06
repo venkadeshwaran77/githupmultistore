@@ -81,13 +81,11 @@ class _CustomerRegisterState extends State<CustomerRegister> {
             email: email,
             password: password);
 
-          firebase_storage.Reference ref = firebase_storage
-              .FirebaseStorage
+          firebase_storage.Reference ref = firebase_storage.FirebaseStorage
               .instance
               .ref('cust-images/$email.jpg');
 
           await ref.putFile(File(_imageFile!.path));
-
           _uid = FirebaseAuth.instance.currentUser!.uid;
 
           profileImage = await ref.getDownloadURL();
@@ -97,7 +95,7 @@ class _CustomerRegisterState extends State<CustomerRegister> {
             'profileimage': profileImage,
             'phone': '',
             'address': '',
-            'uid': _uid,
+            'cid': _uid
           });
           _formKey.currentState!.reset();
           setState(() {
